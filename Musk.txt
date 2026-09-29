@@ -1,0 +1,122 @@
+/24  = 255.255.255.0       → 0.0.0.255
+/25  = 255.255.255.128     → 0.0.0.127
+/26  = 255.255.255.192     → 0.0.0.63
+/27  = 255.255.255.224     → 0.0.0.31
+/28  = 255.255.255.240     → 0.0.0.15
+/29  = 255.255.255.248     → 0.0.0.7
+/30  = 255.255.255.252     → 0.0.0.3
+/31  = 255.255.255.254     → 0.0.0.1
+/32  = 255.255.255.255     → 0.0.0.0
+
+enable
+configure terminal
+hostname R0
+
+interface g0/0
+ip address 192.168.1.1 255.255.255.0
+no shutdown
+exit
+
+interface g0/1
+ip address 10.0.0.1 255.255.255.252
+no shutdown
+exit
+
+! ---------- RIPv2 ----------
+router rip
+version 2
+no auto-summary
+
+network 192.168.1.0
+network 10.0.0.0
+
+exit
+
+
+// DHCP
+
+enable
+configure terminal
+
+ip dhcp pool R2G0/0
+network 192.168.1.0 255.255.255.0
+default-router 192.168.1.1
+dns-server 8.8.8.8
+exit
+ip dhcp excluded-address 192.168.1.1 192.168.1.10
+
+show ip dhcp pool
+
+
+
+
+
+ACL 
+
+
+
+access-list 4 deny host 192.168.1.2
+access-list 4 permit any
+interface g0/1
+ip access-group 4 out
+exit
+
+
+access-list 5 deny 192.168.1.0 0.0.0.255
+access-list 5 permit any
+interface g0/1
+ip access-group 5 out
+exit
+
+
+access-list 6 deny host 192.168.1.2
+access-list 6 permit any
+interface g0/1
+ip access-group 6 in
+exit
+
+
+
+PAT 
+
+access-list 1 permit 192.168.1.0 0.0.0.255
+
+interface g0/0
+ip nat inside
+exit
+
+interface g0/1
+ip nat outside
+exit
+
+ip nat inside source list 1 interface g0/1 overload
+
+
+
+for multi subnet : 
+
+
+enable
+configure terminal
+
+access-list 1 permit 192.168.1.0 0.0.0.63
+access-list 1 permit 192.168.1.64 0.0.0.63
+access-list 1 permit 192.168.1.128 0.0.0.63
+
+interface g0/0
+ip nat inside
+exit
+
+interface g0/1
+ip nat inside
+exit
+
+interface g0/2
+ip nat inside
+exit
+
+interface s0/0/0
+ip nat outside
+exit
+
+ip nat inside source list 1 interface s0/0/0 overload
